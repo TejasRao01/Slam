@@ -1,0 +1,42 @@
+function sysCall_init() 
+    model=sim.getObject('.')
+    laserHandle=sim.getObject("./sensor")
+    jointHandle=sim.getObject("./joint")
+    red={1,0,0}
+    points=sim.addDrawingObject(sim.drawing_spherepts,0.01,0,-1,100000,nil,nil,nil,red)
+    horizontalScanningAngle=180*math.pi/180
+    scanningDensity=2
+    sim.tubeOpen(0,'blah',1)
+end
+
+function sysCall_sensing() 
+    local s=sim.getObjectSelection()
+    local show=(s and #s==1 and s[1]==model)
+    
+    sim.addDrawingObjectItem(points,nil)
+    pts=math.floor(horizontalScanningAngle*180*scanningDensity/math.pi)+1
+    p=-horizontalScanningAngle/2
+    stepSize=math.pi/(scanningDensity*180)
+    lidar_data = {pts, horizontalScanningAngle, p, stepSize}
+    print(lidar_data)
+    for i=0,pts,1 do
+        sim.setJointPosition(jointHandle,p)
+        p=p+stepSize
+        r,dist,pt=sim.handleProximitySensor(laserHandle)
+        table.insert(lidar_data, dist)
+        if r>0 then
+            m=sim.getObjectMatrix(laserHandle,sim.handle_world)
+            pt=sim.multiplyVector(m,pt)
+            sim.addDrawingObjectItem(points,pt)
+        end
+    end
+    data = sim.packFloatTable(lidar_data)
+    --print(pts)
+    --print(lidar_data)
+    sim.setStringSignal('c',data)
+end 
+
+function angleHMoved(ui,id,v)
+    horizontalScanningAngle=math.pi*(10+1.7*v)/180
+    simUI.setLabelText(ui,1,'Scanning angle ('..math.floor(horizontalScanningAngle*180/math.pi+0.5)..')')
+end
