@@ -12,7 +12,8 @@ import time
 import initialize_sim
 import controller
 import matplotlib.pyplot as plt
-
+import sim
+import localize
 
 def main():
     global client_ID
@@ -22,64 +23,43 @@ def main():
         #Start simulation
         if (initialize_sim.start_simulation(client_ID)):
             
-            #Obtain sim_params
-            #sim_params = get_sim_params()
             
             #Stop Robot
+            open('obj_coordinates.txt', 'w').close()
+            open('motor_ticks.text', 'w').close()
             
             goal = 0
             handles = initialize_sim.Handles(client_ID)
+            initialize_sim.get_obj_coordinates(handles)
             ctrl = controller.Controller(client_ID, goal, handles)
             ctrl.set_vel(0,0)
-            fig, ax = plt.subplots(figsize=(10, 8))
+            #fig, ax = plt.subplots(figsize=(10, 8))
             
-            
+            open('scan.txt', 'w').close()
             open('actual_pos.txt', 'w').close()
-            while goal < len(handles.goal_handles) :
+            
+            while goal < 2:#len(handles.goal_handles) :
                 [goal,currPos] = ctrl.move(client_ID,goal)
                 time.sleep(0.1)
                 
+                res, signal  = sim.simxGetStringSignal(client_ID, 'c', sim.simx_opmode_blocking)
+                lidar_data = sim.simxUnpackFloats(signal)
                 
+               
+                l = localize.Localize(client_ID, 'c')
                 
-            
+                while not l.get_signal():
+                    time.sleep(0.01)
             ctrl.set_vel(0,0)    
                 
-              
             
-# =============================================================================
-#             #Stop robot
-#             set_vel(0, 0)
-#             set_vel(2, 0)
-#             time.sleep(10)
-#             
-#             set_vel(0,0)
-# =============================================================================
-
-# =============================================================================
-#             #Obtain goal state
-#             goal_state = sim_interface.get_goal_pose()
-# 
-#             #Obtain robots position
-#             robot_state = sim_interface.localize_robot()
-# 
-#             while not control.at_goal(robot_state, goal_state):
-#                 [V,W] = control.gtg(robot_state, goal_state)
-#                 sim_interface.setvel_pioneers(V, W)
-#                 time.sleep(0.5)
-#                 robot_state = sim_interface.localize_robot()
-#                 goal_state = sim_interface.get_goal_pose()
-#                                 
-#             #Stop robot
-#             sim_interface.setvel_pioneers(0.0, 0.0)
-# =============================================================================
-
         else:
             print ('Failed to start simulation')
     else:
         print ('Failed connecting to remote API server')
     
     #stop robots
-    initialize_sim.sim_shutdown(client_ID)
+    #initialize_sim.sim_shutdown(client_ID)
     time.sleep(2.0)
     return
 
